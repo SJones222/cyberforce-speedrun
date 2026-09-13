@@ -19,10 +19,14 @@ sudo nft list ruleset
 ```bash
 curl -v http://TARGET/
 sudo apache2ctl configtest
+sudo apache2ctl -t -D DUMP_INCLUDES
 sudo apache2ctl -S
+sudo grep -RniE '^[[:space:]]*Listen[[:space:]]+([^#[:space:]]*:)?80([[:space:]]|$)' /etc/apache2/apache2.conf /etc/apache2/ports.conf /etc/apache2/conf-enabled /etc/apache2/sites-enabled 2>/dev/null
 cat /var/www/html/index.html
 sudo ss -lntp | grep ':80'
 ```
+
+`apache2ctl configtest` only proves syntax. It does **not** prove Apache can bind TCP/80. If syntax is OK but the service fails, inspect every active `Listen` directive and the runtime `ss` output.
 
 ## SSH
 

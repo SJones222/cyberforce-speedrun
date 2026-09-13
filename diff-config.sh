@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -u
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+. "$ROOT/lib/common.sh"
 
 showdiff() {
     local good="$1" live="$2"
@@ -22,3 +23,6 @@ showdiff "$ROOT/configs/bind/db.test.local" /etc/bind/db.test.local
 
 printf '\n=== BIND managed include ===\n'
 grep -nF 'include "/etc/bind/cyberforce-test.local.conf";' /etc/bind/named.conf.local 2>/dev/null || echo 'MANAGED INCLUDE MISSING'
+
+printf '\n=== APACHE active TCP/80 Listen directives ===\n'
+apache_port80_listen_records 2>/dev/null || true

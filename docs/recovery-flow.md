@@ -47,5 +47,6 @@ sudo ./repair.sh icmp
 | SQL login works but query is denied | grants |
 | DNS UDP works but TCP fails | TCP/53 path/firewall |
 | DNS TCP works but UDP fails | UDP/53 path/firewall |
+| Apache says `Syntax OK` but will not start | overlapping/specific `Listen` directives or another process owns TCP/80 |
 | HTTP connects but scorer is red | exact response body |
 | Ping fails but application ports work | ICMP-specific sysctl/firewall |

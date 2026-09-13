@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -u
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+. "$ROOT/lib/common.sh"
 
 printf '=== CyberForce Preflight ===\n'
 
@@ -51,3 +53,59 @@ for p in 21 22 53 80 3306; do
         printf '[----- ] %s\n' "$p"
     fi
 done
+
+printf '\n[HTTP / Apache runtime preflight]\n'
+if ! have_cmd apache2ctl; then
+    printf '[MISS] apache2ctl unavailable; Apache-specific checks skipped\n'
+else
+    APACHE_TEST_OUTPUT="$(apache2ctl configtest 2>&1)"
+    if [ $? -eq 0 ]; then
+        printf '[PASS] Apache configuration syntax valid (%s)\n' "${APACHE_TEST_OUTPUT:-Syntax OK}"
+    else
+        printf '[FAIL] Apache configuration syntax invalid\n%s\n' "$APACHE_TEST_OUTPUT"
+    fi
+
+    mapfile -t HTTP_LISTENS < <(apache_port80_listen_records)
+    if [ "${#HTTP_LISTENS[@]}" -eq 0 ]; then
+        printf '[WARN] No active-looking Apache Listen directive for TCP/80 found\n'
+    else
+        printf 'Apache TCP/80 Listen directives (%d):\n' "${#HTTP_LISTENS[@]}"
+        printf '%s\n' "${HTTP_LISTENS[@]}" | while IFS=$'\t' read -r file line arg raw; do
+            printf '  %s:%s  %s\n' "$file" "$line" "$raw"
+        done
+
+        if [ "${#HTTP_LISTENS[@]}" -gt 1 ]; then
+            printf '[WARN] Multiple TCP/80 Listen directives can overlap and make Apache fail at runtime even when configtest says Syntax OK\n'
+        elif IFS=$'\t' read -r _ _ arg _ <<< "${HTTP_LISTENS[0]}"; then
+            case "$arg" in
+                80|0.0.0.0:80) printf '[PASS] Apache TCP/80 Listen directive is externally reachable in principle (%s)\n' "$arg" ;;
+                *) printf '[WARN] Apache TCP/80 Listen directive is address-specific (%s); scoring may not reach it remotely\n' "$arg" ;;
+            esac
+        fi
+    fi
+
+    if systemctl is-active --quiet apache2 2>/dev/null; then
+        printf '[PASS] Apache service active (actual runtime start succeeded)\n'
+    else
+        printf '[FAIL] Apache service not active; Syntax OK alone does not prove Apache can bind/start\n'
+        systemctl show apache2 -p ActiveState -p SubState -p Result --no-pager 2>/dev/null || true
+    fi
+
+    if external_tcp_listener 80; then
+        printf '[PASS] TCP/80 has a non-loopback listener\n'
+    else
+        printf '[FAIL] TCP/80 has no non-loopback listener\n'
+        ss -ltnp 2>/dev/null | grep -E '(:80)([[:space:]]|$)' || true
+    fi
+
+    if have_cmd curl; then
+        HTTP_BODY="$(curl -fsS --max-time 3 http://127.0.0.1/ 2>/dev/null || true)"
+        if [ "$HTTP_BODY" = 'Hello World!' ]; then
+            printf '[PASS] HTTP response body exactly matches Hello World!\n'
+        else
+            printf '[FAIL] HTTP response body mismatch (got: %s)\n' "${HTTP_BODY:-<empty>}"
+        fi
+    else
+        printf '[MISS] curl unavailable; HTTP content check skipped\n'
+    fi
+fi

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -u
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+. "$ROOT/lib/common.sh"
 
 SERVICE="${1:-}"
 [ -n "$SERVICE" ] || { echo "Usage: $0 {http|ssh|ftp|mariadb|dns|icmp}" >&2; exit 2; }
@@ -31,7 +33,10 @@ OUT="${TMPDIR:-/tmp}/cyberforce-${KIND}-${STAMP}.txt"
     case "$KIND" in
         http)
             echo '=== APACHE CONFIGTEST ==='; apache2ctl configtest 2>&1 || true
+            echo '=== APACHE ACTIVE TCP/80 LISTEN DIRECTIVES ==='; apache_port80_listen_records 2>&1 || true
             echo '=== APACHE SITES ==='; apache2ctl -S 2>&1 || true
+            echo '=== TCP/80 RUNTIME ==='; ss -ltnp 2>&1 | grep -E '(:80)([[:space:]]|$)' || true
+            echo '=== HTTP BODY ==='; curl -fsS --max-time 3 http://127.0.0.1/ 2>&1 || true; echo
             echo '=== INDEX ==='; ls -l /var/www/html/index.html 2>&1 || true; cat /var/www/html/index.html 2>&1 || true
             ;;
         ssh)

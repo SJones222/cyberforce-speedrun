@@ -17,13 +17,6 @@ check_service() {
     systemctl is-active --quiet "$svc" 2>/dev/null && pass "$label service active" || fail "$label service active"
 }
 
-external_tcp_listener() {
-    local port="$1" addrs
-    addrs="$(ss -lntH 2>/dev/null | awk -v p=":$port" '$4 ~ p"$" {print $4}')"
-    [ -n "$addrs" ] || return 1
-    printf '%s\n' "$addrs" | grep -Ev '^(127\.|\[::1\]:|::1:)' >/dev/null
-}
-
 listener_udp() {
     local port="$1"
     ss -lnuH 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)${port}$"
@@ -54,10 +47,11 @@ printf '%s\n' "$EFFECTIVE" | grep -qx 'port 22' && pass 'SSH effective port 22' 
 printf '%s\n' "$EFFECTIVE" | grep -qx 'pubkeyauthentication yes' && pass 'SSH public-key authentication enabled' || fail 'SSH public-key authentication enabled'
 
 # HTTP
+if apache2ctl configtest >/dev/null 2>&1; then pass 'HTTP Apache configuration syntax'; else fail 'HTTP Apache configuration syntax'; fi
 check_service apache2 HTTP
+external_tcp_listener 80 && pass 'HTTP TCP/80 externally bound' || fail 'HTTP TCP/80 externally bound'
 HTTP_BODY="$(curl -fsS --max-time 3 http://127.0.0.1/ 2>/dev/null || true)"
 [ "$HTTP_BODY" = 'Hello World!' ] && pass 'HTTP exact body' || fail "HTTP exact body (got: ${HTTP_BODY:-<empty>})"
-external_tcp_listener 80 && pass 'HTTP TCP/80 externally bound' || fail 'HTTP TCP/80 externally bound'
 
 # FTP
 check_service vsftpd FTP

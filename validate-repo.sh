@@ -74,6 +74,14 @@ else
     warn 'named-checkzone unavailable; BIND zone validated structurally only.'
 fi
 
+
+printf '\n=== HTTP listener regression ===\n'
+if "$ROOT/tests/test-http-listen-normalization.sh"; then
+    pass 'HTTP listener normalization regression suite'
+else
+    fail 'HTTP listener normalization regression suite'
+fi
+
 printf '\n=== Secret / private-key guard ===\n'
 if grep -RInE --exclude-dir=.git --exclude='validate-repo.sh' 'BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|github_pat_[A-Za-z0-9_]+|ghp_[A-Za-z0-9]+' "$ROOT" >/dev/null 2>&1; then
     fail 'possible private key or GitHub token material detected'
