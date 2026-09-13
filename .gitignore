@@ -1,0 +1,25 @@
+# Generated output / local artifacts
+*.log
+*.out
+*.bak
+*.tmp
+backups/
+artifacts/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*_private_key
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/

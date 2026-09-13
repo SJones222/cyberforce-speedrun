@@ -1,0 +1,11 @@
+$TTL 300
+@   IN  SOA ns.test.local. admin.test.local. (
+        2026091201
+        300
+        300
+        604800
+        300
+)
+@   IN  NS  ns.test.local.
+@   IN  A   10.10.10.10
+ns  IN  A   10.10.10.10
